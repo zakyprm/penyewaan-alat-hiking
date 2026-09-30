@@ -3,8 +3,12 @@ import { ALLOWED_IMAGE_HOSTS } from "./src/lib/image-hosts";
 
 const nextConfig: NextConfig = {
   images: {
-    // Hanya host yang ada di src/lib/image-hosts.ts
-    remotePatterns: ALLOWED_IMAGE_HOSTS.map((hostname) => ({ protocol: "https" as const, hostname })),
+    remotePatterns: [
+      // Host statis yang ada di src/lib/image-hosts.ts
+      ...ALLOWED_IMAGE_HOSTS.map((hostname) => ({ protocol: "https" as const, hostname })),
+      // Store Vercel Blob (produksi): https://<store-id>.public.blob.vercel-storage.com/...
+      { protocol: "https" as const, hostname: "*.public.blob.vercel-storage.com" },
+    ],
   },
 };
 

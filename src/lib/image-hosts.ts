@@ -6,10 +6,17 @@
  */
 export const ALLOWED_IMAGE_HOSTS = ["placehold.co"] as const;
 
+/**
+ * Subdomain dari store Vercel Blob (produksi): https://<store-id>.public.blob.vercel-storage.com/...
+ * Store-id unik per store, jadi dicocokkan lewat pola, bukan daftar statis seperti ALLOWED_IMAGE_HOSTS.
+ */
+const BLOB_HOST_PATTERN = /^[a-z0-9]+\.public\.blob\.vercel-storage\.com$/;
+
 export function isAllowedExternalImage(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && (ALLOWED_IMAGE_HOSTS as readonly string[]).includes(url.hostname);
+    if (url.protocol !== "https:") return false;
+    return (ALLOWED_IMAGE_HOSTS as readonly string[]).includes(url.hostname) || BLOB_HOST_PATTERN.test(url.hostname);
   } catch {
     return false;
   }
