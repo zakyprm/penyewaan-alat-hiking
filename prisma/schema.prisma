@@ -1,0 +1,333 @@
+// Skema database Penyewaan Alat Hiking (design.md bagian 4).
+// Semua nominal uang dalam Rupiah bilangan bulat (Req 6.6).
+// Semua waktu disimpan dalam UTC (Req 18.7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Enum
+// ============================================================
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum Visibility {
+  PUBLIC // tampil di katalog
+  INTERNAL // hanya bisa disewa lewat admin (walk-in)
+}
+
+enum OrderSource {
+  ONLINE
+  WALK_IN
+}
+
+enum OrderStatus {
+  MENUNGGU_PEMBAYARAN
+  DIKONFIRMASI
+  DIAMBIL
+  DIKEMBALIKAN
+  SELESAI
+  DIBATALKAN
+}
+
+enum PaymentMethod {
+  ONLINE
+  BAYAR_DI_TOKO
+}
+
+enum PaymentStatus {
+  MENUNGGU
+  LUNAS
+  GAGAL
+  KEDALUWARSA
+}
+
+enum PaymentPurpose {
+  SEWA_DAN_DEPOSIT
+  DENDA
+  REFUND_DEPOSIT
+}
+
+enum PaymentChannel {
+  MIDTRANS
+  TUNAI
+  TRANSFER
+  QRIS
+}
+
+enum GuaranteeType {
+  DEPOSIT
+  KTP
+}
+
+enum GuaranteeStatus {
+  BELUM_DITERIMA
+  DITERIMA
+  DIKEMBALIKAN
+}
+
+enum ChargeType {
+  TELAT
+  KERUSAKAN
+  KEHILANGAN
+}
+
+// ============================================================
+// Autentikasi (struktur mengikuti Better Auth)
+// ============================================================
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  phone         String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  orders        Order[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+// ============================================================
+// Katalog
+// ============================================================
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  items Item[]
+}
+
+model Item {
+  id             String      @id @default(cuid())
+  name           String
+  slug           String      @unique
+  categoryId     String
+  category       Category    @relation(fields: [categoryId], references: [id])
+  description    String?
+  specs          Json? // { "Kapasitas": "2 orang", "Berat": "2,1 kg" }
+  pricePerDay    Int
+  depositPerUnit Int         @default(0)
+  stock          Int
+  visibility     Visibility  @default(PUBLIC)
+  allowKtp       Boolean     @default(true)
+  isActive       Boolean     @default(true)
+  deletedAt      DateTime? // soft delete (Req 12.1)
+  images         ItemImage[]
+  orderItems     OrderItem[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([visibility, isActive])
+  @@index([categoryId])
+}
+
+model ItemImage {
+  id     String @id @default(cuid())
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url    String
+  order  Int    @default(0)
+
+  @@index([itemId])
+}
+
+// ============================================================
+// Pesanan
+// ============================================================
+
+model Order {
+  id              String        @id @default(cuid())
+  code            String        @unique // contoh: HK-260926-0001
+  source          OrderSource
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  customerName    String // snapshot, juga dipakai untuk tamu walk-in
+  customerPhone   String
+  startAt         DateTime // waktu ambil
+  endAt           DateTime // jatuh tempo
+  rentalDays      Int
+  status          OrderStatus
+  paymentMethod   PaymentMethod
+  guaranteeType   GuaranteeType
+  rentalSubtotal  Int
+  depositTotal    Int // 0 jika jaminan KTP
+  // snapshot kebijakan saat pesanan dibuat (Req 10.5)
+  graceHours      Int
+  lateFinePercent Int
+  // batas bayar: online = dibuat + N menit; bayar di toko = startAt - N jam; walk-in = null
+  paymentDueAt    DateTime?
+  pickedUpAt      DateTime?
+  returnedAt      DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  note            String?
+  createdById     String? // admin pembuat (walk-in)
+  items           OrderItem[]
+  payments        Payment[]
+  charges         OrderCharge[]
+  events          OrderEvent[]
+  guarantee       Guarantee?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, startAt, endAt])
+  @@index([userId])
+  @@index([customerPhone])
+}
+
+model OrderItem {
+  id             String        @id @default(cuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId         String
+  item           Item          @relation(fields: [itemId], references: [id])
+  itemName       String // snapshot
+  quantity       Int
+  pricePerDay    Int // snapshot
+  depositPerUnit Int // snapshot
+  lineTotal      Int
+  charges        OrderCharge[]
+
+  @@index([itemId])
+  @@index([orderId])
+}
+
+model Payment {
+  id              String         @id @default(cuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id])
+  purpose         PaymentPurpose
+  channel         PaymentChannel
+  amount          Int // selalu positif; arah uang ditentukan oleh purpose
+  status          PaymentStatus
+  midtransOrderId String?        @unique
+  snapToken       String?
+  rawNotification Json?
+  paidAt          DateTime?
+  recordedById    String? // admin untuk pembayaran manual
+  createdAt       DateTime       @default(now())
+
+  @@index([orderId])
+}
+
+model OrderCharge {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       Order      @relation(fields: [orderId], references: [id])
+  type        ChargeType
+  orderItemId String?
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+  amount      Int
+  note        String?
+  createdById String?
+  createdAt   DateTime   @default(now())
+
+  @@index([orderId])
+}
+
+// Sengaja TIDAK ada kolom nomor atau foto KTP (Req 7.6).
+model Guarantee {
+  id           String          @id @default(cuid())
+  orderId      String          @unique
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type         GuaranteeType
+  status       GuaranteeStatus @default(BELUM_DITERIMA)
+  receivedAt   DateTime?
+  receivedById String?
+  returnedAt   DateTime?
+  returnedById String?
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorId   String? // null = sistem (cron/webhook)
+  type      String // STATUS_CHANGED, PAYMENT_RECORDED, GUARANTEE_RECEIVED, CHARGE_ADDED, ...
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// Penghitung harian untuk kode pesanan HK-YYMMDD-NNNN (dipakai di Task 7.2)
+model OrderCodeCounter {
+  day   String @id // YYMMDD dalam WIB
+  value Int    @default(0)
+}
+
+// ============================================================
+// Pengaturan toko (satu baris, id = 1)
+// ============================================================
+
+model Setting {
+  id                     Int      @id @default(1)
+  graceHours             Int      @default(12)
+  lateFinePercent        Int      @default(100)
+  depositEnabled         Boolean  @default(true)
+  ktpEnabled             Boolean  @default(true)
+  onlinePaymentExpiryMin Int      @default(60)
+  payAtStoreCancelHours  Int      @default(24)
+  openHour               Int      @default(8) // WIB
+  closeHour              Int      @default(21) // WIB
+  updatedAt              DateTime @updatedAt
+}

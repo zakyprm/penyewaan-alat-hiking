@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: var(--font-inter);
+
+  /* Warna khusus aplikasi: aksen coklat tanah dan status pesanan */
+  --color-earth: var(--earth);
+  --color-earth-foreground: var(--earth-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-muted: var(--warning-muted);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-muted: var(--info-muted);
+  --color-danger-muted: var(--danger-muted);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Tema earthy/outdoor (design 8.3).
+ * Pasangan teks/latar dipilih agar kontras memenuhi WCAG AA (>= 4.5:1).
+ */
+:root {
+  --radius: 0.75rem;
+
+  --background: #faf8f5; /* netral hangat */
+  --foreground: #1f2a24; /* teks utama */
+  --card: #ffffff;
+  --card-foreground: #1f2a24;
+  --popover: #ffffff;
+  --popover-foreground: #1f2a24;
+
+  --primary: #2f5d50; /* hijau hutan */
+  --primary-foreground: #ffffff;
+  --secondary: #eef2ee;
+  --secondary-foreground: #1f3b33;
+  --muted: #f1ede7;
+  --muted-foreground: #5b665f;
+  --accent: #efe8df; /* latar hover/terpilih yang lembut */
+  --accent-foreground: #1f2a24;
+
+  --earth: #8b5e3c; /* coklat tanah */
+  --earth-foreground: #ffffff;
+
+  --destructive: #b42318;
+  --danger-muted: #fdecea;
+  --success: #1f7a4d;
+  --success-foreground: #ffffff;
+  --success-muted: #e6f4ec;
+  --warning: #8a5a00;
+  --warning-foreground: #ffffff;
+  --warning-muted: #fdf3d8;
+  --info: #1d5fa8;
+  --info-foreground: #ffffff;
+  --info-muted: #e5eef9;
+
+  --border: #e3ddd4;
+  --input: #d9d2c7;
+  --ring: #2f5d50;
+
+  --chart-1: #2f5d50;
+  --chart-2: #8b5e3c;
+  --chart-3: #6f9a7d;
+  --chart-4: #c9a27e;
+  --chart-5: #3f4b44;
+
+  --sidebar: #f4f1ec;
+  --sidebar-foreground: #1f2a24;
+  --sidebar-primary: #2f5d50;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8e2d8;
+  --sidebar-accent-foreground: #1f2a24;
+  --sidebar-border: #e3ddd4;
+  --sidebar-ring: #2f5d50;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
